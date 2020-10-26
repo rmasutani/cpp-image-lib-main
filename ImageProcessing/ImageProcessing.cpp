@@ -1,6 +1,9 @@
 // ImageProcessing.cpp : This file contains the 'main' function. Program execution begins and ends there.
 #include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 #include "ImageProcessing.h"
+using namespace std;
 
 ImageProcessing::ImageProcessing(
 	const char* _inImgName,
@@ -28,20 +31,23 @@ ImageProcessing::ImageProcessing(
 void ImageProcessing::readImage() {
 	int i;
 	FILE *streamIn;
-	streamIn = fopen(inImgName, "rb");
-	if (streamIn == (FILE*)0) {
-		std::cout << "Unable to open file. Mayeb file does not exist" << std::endl;
+	errno_t err;
+	err = fopen_s(&streamIn, inImgName, "rb");
+	if (!err && streamIn != NULL) {
+		std::cout << "Unable to open file. Maybe file does not exist" << std::endl;
 		exit(0);
+	} else {
+		for (i = 0; i < BMP_HEADER_SIZE; i++) {
+			header[i] = getc(streamIn);
+		}
 	}
-	for (i = 0; i < 54; i++) {
-		header[i] = getc(streamIn);
-	}
+	
 	*width = *(int*)&header[10];
 	*height = *(int*)&header[22];
 	*bitDepth = *(int*)&header[28];
 
 	if (*bitDepth <= 8) {
-		fread(colorTable, sizeof(unsigned char), 1024, streamIn);
+		fread(colorTable, sizeof(unsigned char), BMP_COLOR_TABLE_SIZE, streamIn);
 	}
 
 	fread(inBuf, sizeof(unsigned char), _512BY512, streamIn);
@@ -49,8 +55,16 @@ void ImageProcessing::readImage() {
 }
 
 void ImageProcessing::writeImage() {
-	FILE* fo = fopen(outImgName, "wb");
-	fwrite(header, sizeof(unsigned char), 54, fo);
+	FILE* fo;
+	errno_t err;
+	err = fopen_s(&fo, outImgName, "wb");
+
+	if (!err && fo != NULL) {
+		std::cout << "Unable to open file. Maybe file does not exist" << std::endl;
+		exit(0);
+	}
+
+	fwrite(header, sizeof(unsigned char), BMP_HEADER_SIZE, fo);
 	if (*bitDepth <= 8) {
 		fwrite(colorTable, sizeof(unsigned char), BMP_COLOR_TABLE_SIZE, fo);
 	}
